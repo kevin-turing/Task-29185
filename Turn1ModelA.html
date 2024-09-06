@@ -1,1 +1,146 @@
-T1MA
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird Clone</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        #gameArea {
+            width: 100%;
+            height: 500px;
+            background: linear-gradient(to bottom, #87CEEB, #E0F6FF);
+            position: relative;
+            overflow: hidden;
+        }
+        .cloud {
+            position: absolute;
+            width: 200px;
+            animation: clouds 20s linear infinite;
+        }
+        #bird {
+            position: absolute;
+            width: 50px;
+            transition: transform 0.1s;
+        }
+        .box {
+            position: absolute;
+            width: 50px;
+            background: green;
+        }
+        @keyframes clouds {
+            from {right: -200px;}
+            to {right: 100%;}
+        }
+    </style>
+</head>
+<body>
+
+<div id="menu" class="container text-center">
+    <h1>Flappy Bird</h1>
+    <button id="playButton" class="btn btn-primary">Play</button>
+    <button id="settingsButton" class="btn btn-secondary">Settings</button>
+    <div id="settings" style="display:none;">
+        <label>Difficulty: 
+            <select id="difficulty">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+        </label>
+    </div>
+</div>
+
+<div id="gameArea" style="display:none;">
+    <div id="score" class="badge badge-primary" style="position: absolute; top: 10px; left: 10px; z-index: 100;">Score: 0</div>
+    <img id="bird" src="https://img.clipart-library.com/2/clip-transparent-bird-gif/clip-transparent-bird-gif-10.gif" style="left: 50px; top: 200px;">
+    <!-- Clouds and buildings will be dynamically added -->
+</div>
+
+<div id="pauseScreen" class="modal" tabindex="-1" style="display:none;">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Paused</h5>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Resume</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+    $(document).ready(function() {
+        let gameLoop, bird, score = 0, difficulty = 'medium', gapSize = 150;
+
+        // Settings visibility toggle
+        $("#settingsButton").click(function(){
+            $("#settings").toggle();
+        });
+
+        // Difficulty setting
+        $("#difficulty").change(function(){
+            switch($(this).val()) {
+                case 'easy': gapSize = 200; break;
+                case 'medium': gapSize = 150; break;
+                case 'hard': gapSize = 100; break;
+            }
+        });
+
+        // Game start
+        $("#playButton").click(function(){
+            $("#menu").hide();
+            $("#gameArea").show();
+            startGame();
+        });
+
+        function startGame() {
+            bird = $("#bird");
+            bird.css({top: '200px'});
+            score = 0;
+            $("#score").text('Score: ' + score);
+            gameLoop = setInterval(game, 1000/30);
+        }
+
+        function game() {
+            let birdPos = parseInt(bird.css('top'));
+            let gravity = 5;
+
+            // Bird falls by gravity
+            bird.css('top', birdPos + gravity);
+
+            // Bird tilt based on position (simple tilt effect)
+            if (birdPos < 200) bird.css('transform', 'rotate(-20deg)');
+            else if (birdPos > 250) bird.css('transform', 'rotate(20deg)');
+            else bird.css('transform', 'rotate(0deg)');
+
+            // Box movement, collision, etc. would be here
+            // ...
+
+            // Pause game
+            $(document).on('keydown', function(e) {
+                if (e.which == 32) { // Spacebar for jump
+                    bird.css('top', Math.max(birdPos - 40, 0));
+                } else if (e.which == 27) { // Esc for pause
+                    clearInterval(gameLoop);
+                    $('#pauseScreen').modal('show');
+                }
+            });
+
+            // Resume from pause
+            $('.modal-footer button').on('click', function(){
+                $('#pauseScreen').modal('hide');
+                gameLoop = setInterval(game, 1000/30);
+            });
+        }
+
+        // Initial cloud setup would go here
+    });
+</script>
+
+</body>
+</html>

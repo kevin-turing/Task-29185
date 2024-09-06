@@ -1,1 +1,263 @@
-T1IR
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clappy Bird</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { overflow: hidden; margin: 0; padding: 0; }
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background: linear-gradient(to bottom, #87CEEB, #E0F6FF);
+            overflow: hidden;
+        }
+        #bird {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            transition: transform 0.1s;
+        }
+        .obstacle {
+            position: absolute;
+            width: 60px;
+            background-color: #4CAF50;
+        }
+        .cloud {
+            position: absolute;
+            opacity: 0.7;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            color: white;
+        }
+        .screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="score">Score: 0</div>
+        <img id="bird" src="https://img.clipart-library.com/2/clip-transparent-bird-gif/clip-transparent-bird-gif-10.gif" alt="Bird">
+    </div>
+
+    <div id="menu-screen" class="screen">
+        <h2>Flappy Bird Clone</h2>
+        <button id="play-btn" class="btn btn-primary">Play</button>
+        <button id="settings-btn" class="btn btn-secondary">Settings</button>
+    </div>
+
+    <div id="settings-screen" class="screen" style="display: none;">
+        <h3>Settings</h3>
+        <select id="difficulty" class="form-select mb-3">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+        </select>
+        <button id="back-btn" class="btn btn-secondary">Back</button>
+    </div>
+
+    <div id="pause-screen" class="screen" style="display: none;">
+        <h3>Paused</h3>
+        <button id="resume-btn" class="btn btn-primary">Resume</button>
+    </div>
+
+    <script>
+        const gameContainer = document.getElementById('game-container');
+        const bird = document.getElementById('bird');
+        const scoreDisplay = document.getElementById('score');
+        const menuScreen = document.getElementById('menu-screen');
+        const settingsScreen = document.getElementById('settings-screen');
+        const pauseScreen = document.getElementById('pause-screen');
+
+        let gameLoop, score = 0, obstacles = [], birdVelocity = 0;
+        const gravity = 0.25;
+        const jumpStrength = -6;
+        let gameSpeed = 1.5;
+        let gapSize = 200;
+        let isGameRunning = false, isPaused = false;
+
+        function initializeBird() {
+            bird.style.top = '50%';
+            bird.style.left = '50px';
+            bird.style.width = '50px';
+            bird.style.height = '50px';
+        }
+
+        function startGame() {
+            menuScreen.style.display = 'none';
+            resetGame();
+            isGameRunning = true;
+            gameLoop = setInterval(updateGame, 20);
+            document.addEventListener('keydown', handleInput);
+            gameContainer.addEventListener('click', jump);
+        }
+
+        function resetGame() {
+            initializeBird();
+            score = 0;
+            updateScore();
+            obstacles.forEach(obs => obs.remove());
+            obstacles = [];
+            birdVelocity = 0;
+        }
+
+        function updateGame() {
+            if (isPaused) return;
+            moveBird();
+            moveObstacles();
+            checkCollision();
+        }
+
+        function moveBird() {
+            birdVelocity += gravity;
+            let birdTop = parseFloat(bird.style.top) || gameContainer.clientHeight / 2;
+            birdTop += birdVelocity;
+
+            if (birdTop < 0) {
+                birdTop = 0;
+                birdVelocity = 0;
+            } else if (birdTop > gameContainer.clientHeight - bird.clientHeight) {
+                gameOver();
+                return;
+            }
+
+            bird.style.top = birdTop + 'px';
+            bird.style.transform = `rotate(${birdVelocity * 2}deg)`;
+        }
+
+        function jump() {
+            birdVelocity = jumpStrength;
+        }
+
+        function createObstacle() {
+            const obstacleTop = document.createElement('div');
+            const obstacleBottom = document.createElement('div');
+            obstacleTop.className = obstacleBottom.className = 'obstacle';
+
+            const obstacleHeight = Math.random() * (gameContainer.clientHeight - gapSize - 200) + 100;
+            obstacleTop.style.height = obstacleHeight + 'px';
+            obstacleTop.style.top = '0';
+            obstacleBottom.style.height = (gameContainer.clientHeight - obstacleHeight - gapSize) + 'px';
+            obstacleBottom.style.bottom = '0';
+
+            obstacleTop.style.left = obstacleBottom.style.left = gameContainer.clientWidth + 'px';
+
+            gameContainer.appendChild(obstacleTop);
+            gameContainer.appendChild(obstacleBottom);
+            obstacles.push(obstacleTop, obstacleBottom);
+        }
+
+        function moveObstacles() {
+            if (obstacles.length === 0 || obstacles[obstacles.length - 1].offsetLeft < gameContainer.clientWidth - 250) {
+                createObstacle();
+            }
+
+            obstacles.forEach((obs, index) => {
+                obs.style.left = (obs.offsetLeft - gameSpeed) + 'px';
+                if (obs.offsetLeft + obs.clientWidth < 0) {
+                    obs.remove();
+                    obstacles.splice(index, 1);
+                    if (index % 2 === 0) {
+                        score++;
+                        updateScore();
+                    }
+                }
+            });
+        }
+
+        function checkCollision() {
+            const birdRect = bird.getBoundingClientRect();
+            for (let i = 0; i < obstacles.length; i += 2) {
+                const topRect = obstacles[i].getBoundingClientRect();
+                const bottomRect = obstacles[i + 1].getBoundingClientRect();
+                if (
+                    birdRect.right > topRect.left && birdRect.left < topRect.right &&
+                    (birdRect.top < topRect.bottom || birdRect.bottom > bottomRect.top)
+                ) {
+                    gameOver();
+                    return;
+                }
+            }
+        }
+
+        function gameOver() {
+            isGameRunning = false;
+            clearInterval(gameLoop);
+            alert(`Game Over! Your score: ${score}`);
+            menuScreen.style.display = 'block';
+        }
+
+        function updateScore() {
+            scoreDisplay.textContent = `Score: ${score}`;
+        }
+
+        function handleInput(e) {
+            if (e.code === 'Space') jump();
+            if (e.code === 'Escape') togglePause();
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            pauseScreen.style.display = isPaused ? 'block' : 'none';
+        }
+
+        document.getElementById('play-btn').addEventListener('click', startGame);
+        document.getElementById('settings-btn').addEventListener('click', () => {
+            menuScreen.style.display = 'none';
+            settingsScreen.style.display = 'block';
+        });
+        document.getElementById('back-btn').addEventListener('click', () => {
+            settingsScreen.style.display = 'none';
+            menuScreen.style.display = 'block';
+        });
+        document.getElementById('resume-btn').addEventListener('click', togglePause);
+
+        document.getElementById('difficulty').addEventListener('change', (e) => {
+            switch (e.target.value) {
+                case 'easy':
+                    gameSpeed = 1;
+                    gapSize = 250;
+                    break;
+                case 'medium':
+                    gameSpeed = 1.5;
+                    gapSize = 200;
+                    break;
+                case 'hard':
+                    gameSpeed = 2;
+                    gapSize = 150;
+                    break;
+            }
+        });
+
+        // Create clouds
+        for (let i = 0; i < 5; i++) {
+            const cloud = document.createElement('div');
+            cloud.className = 'cloud';
+            cloud.style.width = '100px';
+            cloud.style.height = '60px';
+            cloud.style.borderRadius = '50px';
+            cloud.style.background = 'white';
+            cloud.style.top = Math.random() * gameContainer.clientHeight / 2 + 'px';
+            cloud.style.left = Math.random() * gameContainer.clientWidth + 'px';
+            gameContainer.appendChild(cloud);
+        }
+
+        // Initialize bird position
+        initializeBird();
+    </script>
+</body>
+</html>
